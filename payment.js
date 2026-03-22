@@ -1,4 +1,4 @@
-/* FILE: payment.js - LANGSUNG COPY PASTE (Hardcode Telegram) */
+/* FILE: payment.js - LANGSUNG COPY PASTE */
 class PaymentSystem {
     constructor() {
         this.pakasirEndpoint = "https://api.pakasir.com/v1";
@@ -13,104 +13,63 @@ class PaymentSystem {
     async createQRISPayment(amount, orderId, customerName) {
         const { slug, apiKey } = await this.getPakasirConfig();
         
-        const paymentData = {
-            amount: amount,
-            order_id: orderId,
-            customer_name: customerName,
-            payment_method: "QRIS",
-            slug: slug
-        };
+        if (!apiKey || apiKey === '') {
+            throw new Error("API Key Pakasir belum diisi");
+        }
         
-        try {
-            const response = await fetch(`${this.pakasirEndpoint}/create-payment`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(paymentData)
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP ${response.status}`);
-            }
-            
-            const data = await response.json();
-            
-            if (data.status === 'success') {
-                return {
-                    qrCode: data.qr_code_url,
-                    paymentId: data.payment_id,
-                    expiryTime: data.expiry_time
-                };
-            } else {
-                throw new Error(data.message || 'Payment creation failed');
-            }
-        } catch (error) {
-            console.error("Payment creation error:", error);
-            throw error;
+        const response = await fetch(`${this.pakasirEndpoint}/create-payment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                amount: amount,
+                order_id: orderId,
+                customer_name: customerName,
+                payment_method: "QRIS",
+                slug: slug
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            return {
+                qrCode: data.qr_code_url,
+                paymentId: data.payment_id,
+                expiryTime: data.expiry_time
+            };
+        } else {
+            throw new Error(data.message || 'Gagal');
         }
     }
     
     async checkPaymentStatus(paymentId) {
         const { apiKey } = await this.getPakasirConfig();
         
-        try {
-            const response = await fetch(`${this.pakasirEndpoint}/payment-status/${paymentId}`, {
-                headers: {
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Accept': 'application/json'
-                }
-            });
-            
-            const data = await response.json();
-            return data.status === 'paid';
-        } catch (error) {
-            console.error("Payment status check error:", error);
-            return false;
-        }
+        const response = await fetch(`${this.pakasirEndpoint}/payment-status/${paymentId}`, {
+            headers: { 'Authorization': `Bearer ${apiKey}` }
+        });
+        
+        const data = await response.json();
+        return data.status === 'paid';
     }
     
     async sendTelegramNotification(message) {
-        // ========== GANTI DENGAN API KEY TELEGRAM KAMU ==========
-        const botToken = '8674394062:AAGfpyj3ggHhOsTc0rZ0CDQz226Hdk5nULA';
-        const chatId = '8217385542';
-        // ========================================================
-        
-        if (botToken && botToken !== '1234567890:ABCdefGHIjklMNOpqrsTUVwxyz') {
-            try {
-                await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chat_id: chatId,
-                        text: message,
-                        parse_mode: 'HTML'
-                    })
-                });
-                console.log("Telegram notification sent");
-            } catch (error) {
-                console.error("Telegram notification failed:", error);
-            }
-        } else {
-            console.log("Telegram not configured, notification:", message);
-        }
+        console.log("NOTIF:", message);
     }
     
     async processPayment(product, userData) {
         return new Promise(async (resolve, reject) => {
             try {
-                const orderId = Date.now() + "_" + Math.random().toString(36).substr(2, 8);
+                const orderId = Date.now() + "_" + Math.random().toString(36).substr(2, 6);
+                
                 const order = {
                     id: orderId,
-                    productId: product.id,
                     productName: product.name,
-                    productType: product.type,
                     amount: product.price,
                     userId: userData.username,
-                    userEmail: userData.email || '',
                     status: "pending",
                     date: new Date().toISOString()
                 };
@@ -119,93 +78,71 @@ class PaymentSystem {
                 
                 const payment = await this.createQRISPayment(product.price, orderId, userData.username);
                 
-                this.showPaymentModal(payment, order, product, userData, resolve);
+                const modal = document.createElement('div');
+                modal.style.position = 'fixed';
+                modal.style.top = '0';
+                modal.style.left = '0';
+                modal.style.width = '100%';
+                modal.style.height = '100%';
+                modal.style.background = 'rgba(0,0,0,0.9)';
+                modal.style.display = 'flex';
+                modal.style.justifyContent = 'center';
+                modal.style.alignItems = 'center';
+                modal.style.zIndex = '9999';
                 
-            } catch (error) {
+                modal.innerHTML = `
+                    <div style="background: #1a1a2e; padding: 30px; border-radius: 20px; text-align: center; max-width: 400px;">
+                        <h2>QRIS Payment</h2>
+                        <img src="${payment.qrCode}" style="width: 250px; margin: 20px 0;">
+                        <p style="font-size: 24px; color: #00ff00;">Rp ${product.price.toLocaleString()}</p>
+                        <p>Order ID: ${orderId}</p>
+                        <button id="checkBtn" style="margin: 10px; padding: 10px 20px; background: #00ff00; border: none; border-radius: 5px; cursor: pointer;">Cek Status</button>
+                        <button id="closeBtn" style="margin: 10px; padding: 10px 20px; background: red; border: none; border-radius: 5px; cursor: pointer;">Tutup</button>
+                        <p id="statusMsg"></p>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                
+                let interval = setInterval(async () => {
+                    try {
+                        const paid = await this.checkPaymentStatus(payment.paymentId);
+                        if (paid) {
+                            clearInterval(interval);
+                            modal.remove();
+                            await db.updateOrder(order.id, { status: "paid" });
+                            alert("Pembayaran berhasil!");
+                            resolve(true);
+                        }
+                    } catch(e) {
+                        console.log(e);
+                    }
+                }, 5000);
+                
+                document.getElementById('checkBtn').onclick = async () => {
+                    const paid = await this.checkPaymentStatus(payment.paymentId);
+                    if (paid) {
+                        clearInterval(interval);
+                        modal.remove();
+                        await db.updateOrder(order.id, { status: "paid" });
+                        alert("Pembayaran berhasil!");
+                        resolve(true);
+                    } else {
+                        document.getElementById('statusMsg').innerHTML = 'Belum terbayar, coba lagi nanti';
+                    }
+                };
+                
+                document.getElementById('closeBtn').onclick = () => {
+                    clearInterval(interval);
+                    modal.remove();
+                    resolve(false);
+                };
+                
+            } catch(error) {
                 alert("Error: " + error.message);
                 reject(error);
             }
         });
-    }
-    
-    showPaymentModal(payment, order, product, userData, resolve) {
-        const modal = document.createElement('div');
-        modal.className = 'loading-overlay';
-        modal.style.flexDirection = 'column';
-        modal.innerHTML = `
-            <div class="card" style="max-width: 450px; text-align: center;">
-                <h2><i class="fas fa-qrcode"></i> QRIS Payment</h2>
-                <div style="margin: 20px 0;">
-                    <img src="${payment.qrCode}" style="width: 250px; height: 250px; border: 2px solid var(--border); border-radius: 15px;">
-                </div>
-                <div style="background: var(--bg-secondary); padding: 15px; border-radius: 10px; margin: 10px 0;">
-                    <p><strong>Total:</strong> Rp ${product.price.toLocaleString()}</p>
-                </div>
-                <div style="text-align: left; margin: 15px 0;">
-                    <p><strong>Produk:</strong> ${product.name}</p>
-                    <p><strong>Pembeli:</strong> ${userData.username}</p>
-                    <p><strong>Order ID:</strong> ${order.id}</p>
-                </div>
-                <div class="loading-spinner" style="margin: 20px auto;"></div>
-                <p>Scan QR code dengan aplikasi pembayaran</p>
-                <button class="btn" id="checkPaymentBtn" style="margin-top: 15px;">
-                    <i class="fas fa-sync-alt"></i> Cek Status
-                </button>
-                <button class="btn btn-danger" id="closePaymentBtn" style="margin-top: 10px;">
-                    <i class="fas fa-times"></i> Tutup
-                </button>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        let checkInterval;
-        let isResolved = false;
-        
-        const completePayment = async () => {
-            if (isResolved) return;
-            isResolved = true;
-            clearInterval(checkInterval);
-            
-            await db.updateOrder(order.id, { status: "paid", paidAt: new Date().toISOString() });
-            
-            const notification = `🎉 PEMBAYARAN BERHASIL!\nProduk: ${product.name}\nPembeli: ${userData.username}\nTotal: Rp ${product.price.toLocaleString()}`;
-            await this.sendTelegramNotification(notification);
-            
-            modal.remove();
-            resolve(true);
-        };
-        
-        const checkPayment = async () => {
-            try {
-                const paid = await this.checkPaymentStatus(payment.paymentId);
-                if (paid) {
-                    await completePayment();
-                } else {
-                    alert("⏳ Pembayaran belum terdeteksi. Silakan scan QR code dan bayar.");
-                }
-            } catch (error) {
-                alert("Error: " + error.message);
-            }
-        };
-        
-        document.getElementById('checkPaymentBtn').onclick = checkPayment;
-        document.getElementById('closePaymentBtn').onclick = () => {
-            clearInterval(checkInterval);
-            modal.remove();
-            resolve(false);
-        };
-        
-        checkInterval = setInterval(async () => {
-            try {
-                const paid = await this.checkPaymentStatus(payment.paymentId);
-                if (paid && !isResolved) {
-                    await completePayment();
-                }
-            } catch (error) {
-                console.error("Auto-check error:", error);
-            }
-        }, 5000);
     }
 }
 
