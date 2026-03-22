@@ -1,4 +1,4 @@
-/* FILE: style.css - UPDATE DENGAN NEON MODE WARNA-WARNI */
+/* FILE: style.css - NEON MODE TANPA ANIMASI MUTER */
 * {
     margin: 0;
     padding: 0;
@@ -30,7 +30,7 @@ body.light {
     --shadow: 0 8px 32px rgba(0,0,0,0.1);
 }
 
-/* NEON MODE - WARNA-WARNI DENGAN EFEK CAHAYA */
+/* NEON MODE - WARNA-WARNI DENGAN EFEK CAHAYA (TANPA ANIMASI MUTER) */
 body.neon {
     --bg-primary: #000000;
     --bg-secondary: #0a0a0a;
@@ -52,7 +52,6 @@ body.neon .app-container {
     overflow-x: hidden;
 }
 
-/* Animated background for neon mode */
 body.neon::before {
     content: '';
     position: fixed;
@@ -69,18 +68,15 @@ body.neon::before {
     );
     pointer-events: none;
     z-index: 0;
-    animation: gradientMove 10s linear infinite;
 }
 
 body.neon .header {
     border-bottom: 2px solid transparent;
     border-image: linear-gradient(90deg, #ff00ff, #00ffff, #ff00ff);
     border-image-slice: 1;
-    animation: borderGlow 2s ease-in-out infinite;
 }
 
 body.neon .logo i {
-    animation: iconGlow 1.5s ease-in-out infinite;
     text-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff, 0 0 30px #ff00ff;
 }
 
@@ -108,7 +104,6 @@ body.neon .nav-btn:hover::before {
 body.neon .nav-btn.active {
     background: linear-gradient(45deg, #ff00ff, #ff44ff, #ff88ff);
     box-shadow: 0 0 20px #ff00ff, 0 0 40px #ff44ff;
-    animation: btnPulse 1s ease-in-out infinite;
 }
 
 body.neon .card {
@@ -117,7 +112,6 @@ body.neon .card {
     border: 1px solid transparent;
     border-image: linear-gradient(135deg, #ff00ff, #00ffff, #ffff00, #ff00ff);
     border-image-slice: 1;
-    animation: cardGlow 3s ease-in-out infinite;
     position: relative;
     z-index: 1;
 }
@@ -138,7 +132,6 @@ body.neon .card::before {
 
 body.neon .card:hover::before {
     opacity: 0.5;
-    animation: borderRotate 2s linear infinite;
 }
 
 body.neon .stat-card {
@@ -154,7 +147,6 @@ body.neon .stat-card:hover {
 }
 
 body.neon .stat-card i {
-    animation: iconPulse 1s ease-in-out infinite;
     text-shadow: 0 0 10px #ff00ff;
 }
 
@@ -200,7 +192,6 @@ body.neon .product-card:hover {
 body.neon .product-price {
     color: #ff00ff;
     text-shadow: 0 0 10px #ff00ff;
-    animation: priceGlow 1.5s ease-in-out infinite;
 }
 
 body.neon input, 
@@ -224,7 +215,6 @@ body.neon .music-player {
     background: rgba(0,0,0,0.8);
     border: 1px solid #ff00ff;
     box-shadow: 0 0 20px rgba(255,0,255,0.5);
-    animation: playerGlow 2s ease-in-out infinite;
 }
 
 body.neon .player-controls button {
@@ -241,12 +231,10 @@ body.neon .status-badge.status-online {
     background: linear-gradient(45deg, #00ff00, #00ffff);
     color: #000;
     text-shadow: none;
-    animation: badgePulse 1s ease-in-out infinite;
 }
 
 body.neon .status-badge.status-offline {
     background: linear-gradient(45deg, #ff0000, #ff00ff);
-    animation: badgePulse 1s ease-in-out infinite;
 }
 
 body.neon .social-link {
@@ -260,133 +248,10 @@ body.neon .social-link:hover {
     box-shadow: 0 0 30px #ff00ff, 0 0 50px #00ffff;
 }
 
-/* Animations for Neon Mode */
-@keyframes gradientMove {
-    0% {
-        background-position: 0 0;
-    }
-    100% {
-        background-position: 100px 100px;
-    }
-}
-
-@keyframes borderGlow {
-    0%, 100% {
-        border-image: linear-gradient(90deg, #ff00ff, #00ffff, #ff00ff);
-        border-image-slice: 1;
-    }
-    50% {
-        border-image: linear-gradient(90deg, #00ffff, #ff00ff, #00ffff);
-        border-image-slice: 1;
-    }
-}
-
-@keyframes iconGlow {
-    0%, 100% {
-        text-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff;
-    }
-    50% {
-        text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 60px #ff00ff;
-    }
-}
-
-@keyframes btnPulse {
-    0%, 100% {
-        box-shadow: 0 0 20px #ff00ff, 0 0 40px #ff44ff;
-    }
-    50% {
-        box-shadow: 0 0 30px #00ffff, 0 0 60px #ff00ff, 0 0 90px #ffff00;
-    }
-}
-
-@keyframes cardGlow {
-    0%, 100% {
-        border-image: linear-gradient(135deg, #ff00ff, #00ffff, #ffff00, #ff00ff);
-        border-image-slice: 1;
-    }
-    25% {
-        border-image: linear-gradient(135deg, #00ffff, #ffff00, #ff00ff, #00ffff);
-        border-image-slice: 1;
-    }
-    50% {
-        border-image: linear-gradient(135deg, #ffff00, #ff00ff, #00ffff, #ffff00);
-        border-image-slice: 1;
-    }
-    75% {
-        border-image: linear-gradient(135deg, #ff00ff, #ffff00, #00ffff, #ff00ff);
-        border-image-slice: 1;
-    }
-}
-
-@keyframes borderRotate {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-@keyframes iconPulse {
-    0%, 100% {
-        text-shadow: 0 0 10px #ff00ff;
-        transform: scale(1);
-    }
-    50% {
-        text-shadow: 0 0 20px #00ffff, 0 0 30px #ff00ff;
-        transform: scale(1.1);
-    }
-}
-
-@keyframes priceGlow {
-    0%, 100% {
-        text-shadow: 0 0 10px #ff00ff;
-    }
-    50% {
-        text-shadow: 0 0 20px #00ffff, 0 0 30px #ff00ff;
-    }
-}
-
-@keyframes playerGlow {
-    0%, 100% {
-        box-shadow: 0 0 20px rgba(255,0,255,0.5);
-    }
-    50% {
-        box-shadow: 0 0 40px rgba(0,255,255,0.8), 0 0 60px rgba(255,0,255,0.5);
-    }
-}
-
-@keyframes badgePulse {
-    0%, 100% {
-        opacity: 1;
-        box-shadow: 0 0 10px currentColor;
-    }
-    50% {
-        opacity: 0.8;
-        box-shadow: 0 0 20px currentColor, 0 0 30px currentColor;
-    }
-}
-
-/* Additional Neon Effects */
-body.neon .loading-overlay {
-    background: rgba(0,0,0,0.95);
-    backdrop-filter: blur(20px);
-}
-
 body.neon .loading-spinner {
     border-color: #ff00ff;
     border-top-color: #00ffff;
     box-shadow: 0 0 20px #ff00ff;
-    animation: spin 1s linear infinite, spinnerGlow 1s ease-in-out infinite;
-}
-
-@keyframes spinnerGlow {
-    0%, 100% {
-        box-shadow: 0 0 20px #ff00ff;
-    }
-    50% {
-        box-shadow: 0 0 40px #00ffff, 0 0 60px #ff00ff;
-    }
 }
 
 body.neon .status-grid .stat-card:nth-child(1) i { color: #ff00ff; text-shadow: 0 0 10px #ff00ff; }
@@ -396,26 +261,14 @@ body.neon .status-grid .stat-card:nth-child(4) i { color: #ff6600; text-shadow: 
 body.neon .status-grid .stat-card:nth-child(5) i { color: #ff00ff; text-shadow: 0 0 10px #ff00ff; }
 body.neon .status-grid .stat-card:nth-child(6) i { color: #00ff00; text-shadow: 0 0 10px #00ff00; }
 
-/* Rainbow text effect for logo in neon mode */
 body.neon .logo span {
     background: linear-gradient(90deg, #ff00ff, #00ffff, #ffff00, #ff00ff);
     background-size: 300% auto;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    animation: rainbowText 3s linear infinite;
 }
 
-@keyframes rainbowText {
-    0% {
-        background-position: 0% 50%;
-    }
-    100% {
-        background-position: 100% 50%;
-    }
-}
-
-/* Floating particles for neon mode */
 body.neon .app-container::after {
     content: '';
     position: fixed;
@@ -429,17 +282,7 @@ body.neon .app-container::after {
         radial-gradient(circle at 80% 70%, rgba(0,255,255,0.1) 1px, transparent 1px),
         radial-gradient(circle at 40% 90%, rgba(255,255,0,0.1) 3px, transparent 3px);
     background-size: 50px 50px, 30px 30px, 70px 70px;
-    animation: particleFloat 20s linear infinite;
     z-index: 0;
-}
-
-@keyframes particleFloat {
-    0% {
-        transform: translateY(0px);
-    }
-    100% {
-        transform: translateY(-100px);
-    }
 }
 
 body {
