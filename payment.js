@@ -1,4 +1,4 @@
-/* FILE: payment.js - LANGSUNG COPY PASTE */
+/* FILE: payment.js - FULL REAL (TANPA DEMO MODE) */
 class PaymentSystem {
     constructor() {
         this.pakasirEndpoint = "https://api.pakasir.com/v1";
@@ -14,8 +14,18 @@ class PaymentSystem {
         const { slug, apiKey } = await this.getPakasirConfig();
         
         if (!apiKey || apiKey === '') {
-            throw new Error("API Key Pakasir belum diisi");
+            throw new Error("API Key Pakasir belum diisi. Silakan isi di database.");
         }
+        
+        const paymentData = {
+            amount: amount,
+            order_id: orderId,
+            customer_name: customerName,
+            payment_method: "QRIS",
+            slug: slug
+        };
+        
+        console.log("Mengirim ke Pakasir:", paymentData);
         
         const response = await fetch(`${this.pakasirEndpoint}/create-payment`, {
             method: 'POST',
@@ -23,16 +33,19 @@ class PaymentSystem {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${apiKey}`
             },
-            body: JSON.stringify({
-                amount: amount,
-                order_id: orderId,
-                customer_name: customerName,
-                payment_method: "QRIS",
-                slug: slug
-            })
+            body: JSON.stringify(paymentData)
         });
         
+        console.log("Response status:", response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Error response:", errorText);
+            throw new Error(`Pakasir Error: ${response.status} - ${errorText}`);
+        }
+        
         const data = await response.json();
+        console.log("Response data:", data);
         
         if (data.status === 'success') {
             return {
@@ -41,7 +54,7 @@ class PaymentSystem {
                 expiryTime: data.expiry_time
             };
         } else {
-            throw new Error(data.message || 'Gagal');
+            throw new Error(data.message || 'Gagal membuat payment');
         }
     }
     
@@ -57,19 +70,41 @@ class PaymentSystem {
     }
     
     async sendTelegramNotification(message) {
-        console.log("NOTIF:", message);
+        const botToken = await db.getConfig('telegram_bot_token');
+        const chatId = await db.getConfig('telegram_chat_id');
+        
+        if (botToken && chatId && botToken !== '') {
+            try {
+                await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: chatId,
+                        text: message,
+                        parse_mode: 'HTML'
+                    })
+                });
+                console.log("Telegram notifikasi terkirim");
+            } catch (error) {
+                console.error("Telegram error:", error);
+            }
+        } else {
+            console.log("Telegram belum dikonfigurasi");
+        }
     }
     
     async processPayment(product, userData) {
         return new Promise(async (resolve, reject) => {
             try {
-                const orderId = Date.now() + "_" + Math.random().toString(36).substr(2, 6);
-                
+                const orderId = Date.now() + "_" + Math.random().toString(36).substr(2, 8);
                 const order = {
                     id: orderId,
+                    productId: product.id,
                     productName: product.name,
+                    productType: product.type,
                     amount: product.price,
                     userId: userData.username,
+                    userEmail: userData.email || '',
                     status: "pending",
                     date: new Date().toISOString()
                 };
@@ -78,71 +113,112 @@ class PaymentSystem {
                 
                 const payment = await this.createQRISPayment(product.price, orderId, userData.username);
                 
-                const modal = document.createElement('div');
-                modal.style.position = 'fixed';
-                modal.style.top = '0';
-                modal.style.left = '0';
-                modal.style.width = '100%';
-                modal.style.height = '100%';
-                modal.style.background = 'rgba(0,0,0,0.9)';
-                modal.style.display = 'flex';
-                modal.style.justifyContent = 'center';
-                modal.style.alignItems = 'center';
-                modal.style.zIndex = '9999';
+                this.showPaymentModal(payment, order, product, userData, resolve, reject);
                 
-                modal.innerHTML = `
-                    <div style="background: #1a1a2e; padding: 30px; border-radius: 20px; text-align: center; max-width: 400px;">
-                        <h2>QRIS Payment</h2>
-                        <img src="${payment.qrCode}" style="width: 250px; margin: 20px 0;">
-                        <p style="font-size: 24px; color: #00ff00;">Rp ${product.price.toLocaleString()}</p>
-                        <p>Order ID: ${orderId}</p>
-                        <button id="checkBtn" style="margin: 10px; padding: 10px 20px; background: #00ff00; border: none; border-radius: 5px; cursor: pointer;">Cek Status</button>
-                        <button id="closeBtn" style="margin: 10px; padding: 10px 20px; background: red; border: none; border-radius: 5px; cursor: pointer;">Tutup</button>
-                        <p id="statusMsg"></p>
-                    </div>
-                `;
-                
-                document.body.appendChild(modal);
-                
-                let interval = setInterval(async () => {
-                    try {
-                        const paid = await this.checkPaymentStatus(payment.paymentId);
-                        if (paid) {
-                            clearInterval(interval);
-                            modal.remove();
-                            await db.updateOrder(order.id, { status: "paid" });
-                            alert("Pembayaran berhasil!");
-                            resolve(true);
-                        }
-                    } catch(e) {
-                        console.log(e);
-                    }
-                }, 5000);
-                
-                document.getElementById('checkBtn').onclick = async () => {
-                    const paid = await this.checkPaymentStatus(payment.paymentId);
-                    if (paid) {
-                        clearInterval(interval);
-                        modal.remove();
-                        await db.updateOrder(order.id, { status: "paid" });
-                        alert("Pembayaran berhasil!");
-                        resolve(true);
-                    } else {
-                        document.getElementById('statusMsg').innerHTML = 'Belum terbayar, coba lagi nanti';
-                    }
-                };
-                
-                document.getElementById('closeBtn').onclick = () => {
-                    clearInterval(interval);
-                    modal.remove();
-                    resolve(false);
-                };
-                
-            } catch(error) {
-                alert("Error: " + error.message);
+            } catch (error) {
+                alert("❌ Error: " + error.message);
                 reject(error);
             }
         });
+    }
+    
+    showPaymentModal(payment, order, product, userData, resolve, reject) {
+        const modal = document.createElement('div');
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.background = 'rgba(0,0,0,0.95)';
+        modal.style.display = 'flex';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+        modal.style.zIndex = '9999';
+        
+        modal.innerHTML = `
+            <div style="background: #1e1e2f; padding: 30px; border-radius: 20px; text-align: center; max-width: 400px; color: white;">
+                <h2><i class="fas fa-qrcode"></i> QRIS Payment</h2>
+                <div style="background: white; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                    <img src="${payment.qrCode}" style="width: 200px;">
+                </div>
+                <p style="font-size: 28px; color: #00ff00; font-weight: bold;">Rp ${product.price.toLocaleString()}</p>
+                <p><i class="fas fa-hashtag"></i> Order ID: ${order.id}</p>
+                <p><i class="fas fa-user"></i> Pembeli: ${userData.username}</p>
+                <p><i class="fas fa-clock"></i> Expired: ${new Date(payment.expiryTime).toLocaleTimeString()}</p>
+                <hr style="margin: 20px 0; border-color: #333;">
+                <div class="loading-spinner" style="margin: 20px auto; width: 40px; height: 40px; border: 3px solid #fff; border-top-color: #00ff00; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <p>Scan QR code dengan aplikasi pembayaran (DANA, OVO, GOPAY, LinkAja)</p>
+                <p style="font-size: 12px; color: #aaa;">Pembayaran akan otomatis terdeteksi dalam 5-10 detik</p>
+                <button id="checkBtn" style="margin-top: 20px; padding: 12px 30px; background: #00ff00; color: black; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                    <i class="fas fa-sync-alt"></i> Cek Status Pembayaran
+                </button>
+                <button id="closeBtn" style="margin-top: 10px; padding: 12px 30px; background: #ff4444; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                    <i class="fas fa-times"></i> Tutup
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Tambahkan style untuk animasi spin
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        let interval;
+        let isResolved = false;
+        
+        const completePayment = async () => {
+            if (isResolved) return;
+            isResolved = true;
+            if (interval) clearInterval(interval);
+            
+            await db.updateOrder(order.id, { status: "paid", paidAt: new Date().toISOString() });
+            
+            const notification = `🎉 PEMBAYARAN BERHASIL! 🎉\n\nProduk: ${product.name}\nPembeli: ${userData.username}\nTotal: Rp ${product.price.toLocaleString()}\nOrder ID: ${order.id}`;
+            await this.sendTelegramNotification(notification);
+            
+            modal.remove();
+            alert(`✅ Pembayaran BERHASIL!\n\nProduk: ${product.name}\nTotal: Rp ${product.price.toLocaleString()}\n\nTerima kasih telah berbelanja!`);
+            resolve(true);
+        };
+        
+        const checkPayment = async () => {
+            try {
+                const paid = await this.checkPaymentStatus(payment.paymentId);
+                if (paid) {
+                    await completePayment();
+                } else {
+                    alert("⏳ Pembayaran belum terdeteksi.\n\nSilakan scan QR code dan lakukan pembayaran terlebih dahulu.\n\nJika sudah bayar, tunggu beberapa saat lalu cek lagi.");
+                }
+            } catch (error) {
+                alert("Error: " + error.message);
+            }
+        };
+        
+        document.getElementById('checkBtn').onclick = checkPayment.bind(this);
+        document.getElementById('closeBtn').onclick = () => {
+            if (interval) clearInterval(interval);
+            modal.remove();
+            resolve(false);
+        };
+        
+        // Auto check setiap 5 detik
+        interval = setInterval(async () => {
+            try {
+                const paid = await this.checkPaymentStatus(payment.paymentId);
+                if (paid && !isResolved) {
+                    await completePayment();
+                }
+            } catch (error) {
+                console.error("Auto-check error:", error);
+            }
+        }, 5000);
     }
 }
 
