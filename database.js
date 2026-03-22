@@ -75,8 +75,8 @@ class Database {
             await this.setConfig('github', 'https://github.com/chrisdev');
             
             // Payment Config
-            await this.setConfig('pakasir_slug', 'chris-official');
-            await this.setConfig('pakasir_api_key', '3cm15DEiB8Y7H5fgxLQQXhOgTT0rpQZB');
+            await this.setConfig('pakasir_slug', 'nexusstore');
+            await this.setConfig('pakasir_api_key', 'ibN4RhnfBKOwRdlXUOlWngVJlDMiUdod');
             
             // Pterodactyl Config
             await this.setConfig('pterodactyl_url', 'https://publikzero.bypstar7.web.id');
