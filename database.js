@@ -79,7 +79,7 @@ class Database {
             await this.setConfig('pakasir_api_key', '3cm15DEiB8Y7H5fgxLQQXhOgTT0rpQZB');
             
             // Pterodactyl Config
-            await this.setConfig('pterodactyl_url', 'https://panel.yourdomain.com');
+            await this.setConfig('pterodactyl_url', 'https://publikzero.bypstar7.web.id');
             await this.setConfig('pterodactyl_api_key', 'ptla_ZFdLS5DKtFpIy4gqzR2z9MnpxfT5KZ5tI40qUPQIUQS');
             await this.setConfig('pterodactyl_client_key', 'ptlc_DXwAmYmUigrN08NKJi7tuvxfKx09ENJXAWjRkIfCZ5Q');
         }
