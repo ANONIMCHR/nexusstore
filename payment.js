@@ -1,4 +1,4 @@
-/* FILE: payment.js - VERSI PAKASIR AKTIF (Langsung Copy Paste) */
+/* FILE: payment.js - FINAL VERSION */
 class PaymentSystem {
     constructor() {
         this.pakasirEndpoint = "https://api.pakasir.com/v1";
@@ -7,11 +7,16 @@ class PaymentSystem {
     async getPakasirConfig() {
         const slug = await db.getConfig('pakasir_slug');
         const apiKey = await db.getConfig('pakasir_api_key');
+        console.log("Pakasir Config - Slug:", slug, "API Key:", apiKey ? "ADA" : "KOSONG");
         return { slug, apiKey };
     }
     
     async createQRISPayment(amount, orderId, customerName) {
         const { slug, apiKey } = await this.getPakasirConfig();
+        
+        if (!apiKey || apiKey === '') {
+            throw new Error("API Key Pakasir belum diisi! Silakan isi API Key di database.");
+        }
         
         const paymentData = {
             amount: amount,
@@ -21,56 +26,52 @@ class PaymentSystem {
             slug: slug
         };
         
-        try {
-            const response = await fetch(`${this.pakasirEndpoint}/create-payment`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(paymentData)
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP ${response.status}`);
-            }
-            
-            const data = await response.json();
-            
-            if (data.status === 'success') {
-                return {
-                    qrCode: data.qr_code_url,
-                    paymentId: data.payment_id,
-                    expiryTime: data.expiry_time
-                };
-            } else {
-                throw new Error(data.message || 'Payment creation failed');
-            }
-        } catch (error) {
-            console.error("Payment creation error:", error);
-            throw error;
+        console.log("Mengirim payment ke Pakasir:", paymentData);
+        
+        const response = await fetch(`${this.pakasirEndpoint}/create-payment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(paymentData)
+        });
+        
+        console.log("Response status:", response.status);
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error("Error response:", errorData);
+            throw new Error(errorData.message || `HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log("Payment created:", data);
+        
+        if (data.status === 'success') {
+            return {
+                qrCode: data.qr_code_url,
+                paymentId: data.payment_id,
+                expiryTime: data.expiry_time
+            };
+        } else {
+            throw new Error(data.message || 'Payment creation failed');
         }
     }
     
     async checkPaymentStatus(paymentId) {
         const { apiKey } = await this.getPakasirConfig();
         
-        try {
-            const response = await fetch(`${this.pakasirEndpoint}/payment-status/${paymentId}`, {
-                headers: {
-                    'Authorization': `Bearer ${apiKey}`,
-                    'Accept': 'application/json'
-                }
-            });
-            
-            const data = await response.json();
-            return data.status === 'paid';
-        } catch (error) {
-            console.error("Payment status check error:", error);
-            return false;
-        }
+        const response = await fetch(`${this.pakasirEndpoint}/payment-status/${paymentId}`, {
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Accept': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        return data.status === 'paid';
     }
     
     async sendTelegramNotification(message) {
@@ -89,7 +90,7 @@ class PaymentSystem {
                     })
                 });
             } catch (error) {
-                console.error("Telegram notification failed:", error);
+                console.error("Telegram failed:", error);
             }
         }
     }
@@ -117,7 +118,7 @@ class PaymentSystem {
                 this.showPaymentModal(payment, order, product, userData, resolve);
                 
             } catch (error) {
-                alert("Error: " + error.message);
+                alert("❌ Error: " + error.message);
                 reject(error);
             }
         });
